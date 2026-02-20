@@ -1,0 +1,132 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+
+  /* ===== DARK MODE (Default) ===== */
+  :root,
+  .dark {
+    --bg-primary: #0f172a;
+    --bg-secondary: #1e293b;
+    --bg-card: #1e293b;
+    --bg-input: #1e293b;
+    --bg-hover: rgba(255, 255, 255, 0.04);
+    --bg-header: #0f172a;
+    --border-color: rgba(255, 255, 255, 0.05);
+    --border-subtle: #334155;
+    --text-primary: #ffffff;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --text-accent: #a78bfa;
+    --accent: #7c3aed;
+    --accent-hover: #6d28d9;
+    --overlay-bg: rgba(0, 0, 0, 0.8);
+    --modal-bg: #0f172a;
+    --modal-border: rgba(139, 92, 246, 0.3);
+    --scrollbar-thumb: #334155;
+    --scrollbar-hover: #475569;
+    --panel-bg: #0f172a;
+    --panel-header-bg: rgba(255, 255, 255, 0.05);
+  }
+
+  /* ===== LIGHT MODE ===== */
+  .light {
+    --bg-primary: #f8fafc;
+    --bg-secondary: #ffffff;
+    --bg-card: #ffffff;
+    --bg-input: #f1f5f9;
+    --bg-hover: rgba(0, 0, 0, 0.04);
+    --bg-header: #ffffff;
+    --border-color: #e2e8f0;
+    --border-subtle: #cbd5e1;
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --text-muted: #94a3b8;
+    --text-accent: #7c3aed;
+    --accent: #7c3aed;
+    --accent-hover: #6d28d9;
+    --overlay-bg: rgba(0, 0, 0, 0.5);
+    --modal-bg: #ffffff;
+    --modal-border: rgba(139, 92, 246, 0.25);
+    --scrollbar-thumb: #cbd5e1;
+    --scrollbar-hover: #94a3b8;
+    --panel-bg: #ffffff;
+    --panel-header-bg: #f1f5f9;
+  }
+
+  body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    @apply font-sans overflow-x-hidden;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar {
+    @apply w-1.5 h-1.5;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb);
+    @apply rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--scrollbar-hover);
+  }
+}
+
+@layer components {
+
+  /* Glassmorphism utility - Removed blur/transparency for performance */
+  .glass-panel {
+    background-color: var(--panel-bg);
+    border: 1px solid var(--border-color);
+    box-shadow: none;
+  }
+
+  .glass-card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    @apply rounded-xl;
+  }
+
+  /* Buttons */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-primary {
+    background-color: var(--accent);
+    color: #ffffff;
+    box-shadow: none;
+  }
+
+  .btn-primary:hover {
+    background-color: var(--accent-hover);
+  }
+
+  .btn-icon {
+    @apply w-10 h-10 rounded-lg flex items-center justify-center;
+    border: 1px solid var(--border-subtle);
+    color: var(--text-muted);
+  }
+
+  .btn-icon:hover {
+    color: var(--text-accent);
+    border-color: var(--accent);
+    background-color: var(--bg-hover);
+  }
+
+  /* Inputs */
+  .input-base {
+    background-color: var(--bg-input);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+    @apply rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500;
+  }
+}
