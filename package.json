@@ -7,7 +7,7 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "rm -rf .nuxt && nuxt prepare"
+    "postinstall": "rm -rf .nuxt node_modules/.cache && nuxt prepare"
   },
   "dependencies": {
     "@nuxtjs/tailwindcss": "^6.14.0",
