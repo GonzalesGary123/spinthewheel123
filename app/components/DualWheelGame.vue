@@ -43,6 +43,15 @@
           <span v-if="isDark">☀️</span>
           <span v-else>🌙</span>
         </button>
+
+        <!-- Auth Link -->
+        <NuxtLink
+          :to="user ? '/dashboard' : '/login'"
+          class="px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all no-underline"
+          :style="{ backgroundColor: 'var(--accent)', color: '#ffffff' }"
+        >
+          {{ user ? 'Dashboard' : 'Login' }}
+        </NuxtLink>
       </div>
     </header>
 
@@ -334,6 +343,9 @@ const navPages = [
   { id: 'support', label: 'Support' }
 ]
 const activePage = ref('wheel')
+
+// Auth - check if user is logged in
+const user = useSupabaseUser()
 
 // Default configurations
 const getDefaultInnerRing = () => [

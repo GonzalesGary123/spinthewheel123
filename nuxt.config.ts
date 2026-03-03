@@ -5,5 +5,15 @@ export default defineNuxtConfig({
   srcDir: 'app/',
   ssr: false,
   css: ['~/assets/css/main.css'],
-  modules: ['@nuxtjs/tailwindcss']
+  modules: ['@nuxtjs/tailwindcss', '@nuxtjs/supabase'],
+  supabase: {
+    url: process.env.SUPABASE_URL,
+    key: process.env.SUPABASE_ANON_KEY,
+    redirectOptions: {
+      login: '/login',
+      callback: '/confirm',
+      include: ['/dashboard(/*)?'],
+      exclude: ['/', '/login', '/signup'],
+    },
+  },
 })

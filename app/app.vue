@@ -1,6 +1,6 @@
 <template>
   <div id="app-root">
-    <DualWheelGame />
+    <NuxtPage />
   </div>
 </template>
 
@@ -14,7 +14,3 @@ onMounted(() => {
   initTheme()
 })
 </script>
-
-<style>
-/* Global styles if any */
-</style>
