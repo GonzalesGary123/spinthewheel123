@@ -102,6 +102,7 @@
           :wheel2-size="outerRingSize"
           :arrow-size="arrowMultiplier"
           :auto-remove-winner="autoRemoveWinner"
+          :instant-select-all="instantSelectAll"
           :current-spin-duration="spinDuration"
           :is-spinning="isSpinning"
           :is-fullscreen="isFullscreen"
@@ -246,6 +247,72 @@
         </button>
       </div>
     </div>
+    <!-- Bulk Results Modal -->
+    <div v-if="showBulkResults" class="fixed inset-0 flex items-center justify-center z-[1000] p-4" :style="{ backgroundColor: 'var(--overlay-bg)' }">
+      <div class="rounded-3xl p-8 max-w-[600px] w-full max-h-[80vh] flex flex-col shadow-none relative" :style="{ backgroundColor: 'var(--modal-bg)', border: '1px solid var(--modal-border)' }">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-3xl font-bold" :style="{ color: 'var(--text-accent)' }">ALL WINNERS</h2>
+          <button 
+            @click="copyBulkResults" 
+            class="px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border" 
+            :style="{ 
+              backgroundColor: copySuccess ? 'rgba(16, 185, 129, 0.1)' : 'var(--bg-hover)', 
+              color: copySuccess ? '#10b981' : 'var(--text-primary)',
+              borderColor: copySuccess ? '#10b981' : 'var(--border-color)'
+            }"
+          >
+            {{ copySuccess ? '✅ Copied!' : '📋 Copy' }}
+          </button>
+        </div>
+        
+        <div class="flex-1 overflow-y-auto mb-6 pr-2 custom-scrollbar">
+          <div class="grid gap-3">
+            <div 
+              v-for="(win, idx) in bulkWinnersList" 
+              :key="idx" 
+              class="flex items-center gap-4 p-4 rounded-xl"
+              :style="{ backgroundColor: 'var(--bg-hover)', border: '1px solid var(--border-color)' }"
+            >
+              <div class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0" :style="{ backgroundColor: 'var(--accent)', color: 'white' }">
+                {{ idx + 1 }}
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="text-[10px] font-bold uppercase tracking-wider opacity-50">{{ innerRingTitle }}</div>
+                <div class="font-bold truncate text-sm">{{ win.inner }}</div>
+              </div>
+              <div class="text-xl opacity-30">→</div>
+              <div class="flex-1 min-w-0">
+                <div class="text-[10px] font-bold uppercase tracking-wider opacity-50">{{ outerRingTitle }}</div>
+                <div class="font-bold truncate text-sm">{{ win.outer }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Losers Section (Unmatched) -->
+        <div v-if="bulkLosersList.inner.length > 0 || bulkLosersList.outer.length > 0" class="mt-4 p-4 rounded-xl border border-red-500/20 bg-red-500/5">
+          <h3 class="text-xs font-bold uppercase tracking-widest text-red-400 mb-3 text-center">Remaining (No Match found)</h3>
+          <div class="flex gap-4">
+            <div v-if="bulkLosersList.inner.length > 0" class="flex-1">
+              <div class="text-[9px] font-bold uppercase tracking-widest text-center mb-2 opacity-50">{{ innerRingTitle }}</div>
+              <div class="flex flex-wrap gap-1 justify-center">
+                <span v-for="loser in bulkLosersList.inner" :key="loser" class="px-2 py-0.5 rounded bg-white/5 text-[10px]">{{ loser }}</span>
+              </div>
+            </div>
+            <div v-if="bulkLosersList.outer.length > 0" class="flex-1">
+              <div class="text-[9px] font-bold uppercase tracking-widest text-center mb-2 opacity-50">{{ outerRingTitle }}</div>
+              <div class="flex flex-wrap gap-1 justify-center">
+                <span v-for="loser in bulkLosersList.outer" :key="loser" class="px-2 py-0.5 rounded bg-white/5 text-[10px]">{{ loser }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn w-full mt-6 py-4 text-lg text-white" :style="{ backgroundColor: 'var(--accent)' }" @click="showBulkResults = false">
+          🎲 Done
+        </button>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -336,11 +403,17 @@ const innerRingSize = ref(150)
 const outerRingSize = ref(150)
 const arrowMultiplier = ref(100)
 const autoRemoveWinner = ref(false)
+const instantSelectAll = ref(false)
 const spinDuration = ref(5) // Default 5s
 
 const currentStep = ref(0) // 0: idle, 1: inner spinning, 2: outer spinning
 const gameTitle = ref('Game Tools')
 const showFinalResult = ref(false)
+const showBulkResults = ref(false)
+const bulkWinnersList = ref([])
+const bulkLosersList = ref({ inner: [], outer: [] })
+const copySuccess = ref(false)
+const forcedOuterIndex = ref(null)
 
 const finalResults = reactive({
   inner: '',
@@ -357,9 +430,82 @@ const isSpinning = computed(() => wheelRef.value?.isSpinning || false)
 import { useAudio } from '~/composables/useAudio'
 const { playWin, playClick } = useAudio()
 
-// Start the sequential spin
+
+const instantSelectAllWinners = () => {
+  if (isSpinning.value) return
+  
+  const inCount = innerRingSegments.value.length
+  const outCount = outerRingSegments.value.length
+  
+  if (inCount === 0 || outCount === 0) {
+    alert('Both wheels must have at least one item.')
+    return
+  }
+
+  // Choose the results FIRST but don't show them yet
+  const shuffledInner = [...innerRingSegments.value].sort(() => Math.random() - 0.5)
+  const shuffledOuter = [...outerRingSegments.value].sort(() => Math.random() - 0.5)
+  const winnerCount = Math.min(inCount, outCount)
+  
+  const newWinners = []
+  for (let i = 0; i < winnerCount; i++) {
+    newWinners.push({
+      inner: shuffledInner[i].label,
+      outer: shuffledOuter[i].label
+    })
+  }
+
+  // Set as bulk winners and losers
+  bulkWinnersList.value = newWinners
+  bulkLosersList.value = {
+    inner: shuffledInner.slice(winnerCount).map(s => s.label),
+    outer: shuffledOuter.slice(winnerCount).map(s => s.label)
+  }
+  
+  // Choose one "Representative" winner to show on the wheel
+  const repWinner = newWinners[0]
+  
+  // Find indices in current wheel segments to force landing
+  const innerIdx = innerRingSegments.value.findIndex(s => s.label === repWinner.inner)
+  const outerIdx = outerRingSegments.value.findIndex(s => s.label === repWinner.outer)
+  
+  forcedOuterIndex.value = outerIdx !== -1 ? outerIdx : null
+  
+  // Set the visual results so the wheel shows the correct names during/after spin
+  finalResults.inner = repWinner.inner
+  finalResults.outer = repWinner.outer
+  
+  // Trigger a visual spin
+  playClick()
+  currentStep.value = 1
+  showFinalResult.value = false
+  showBulkResults.value = false
+  
+  wheelRef.value.startSpin(innerIdx !== -1 ? innerIdx : null)
+}
+
+// Copy bulk results to clipboard
+const copyBulkResults = async () => {
+  const text = bulkWinnersList.value.map((win, i) => `${i + 1}. ${win.inner} → ${win.outer}`).join('\n')
+  try {
+    await navigator.clipboard.writeText(text)
+    copySuccess.value = true
+    setTimeout(() => {
+      copySuccess.value = false
+    }, 2000)
+  } catch (err) {
+    console.error('Failed to copy:', err)
+  }
+}
+
+// Modified startSpinSequence to handle instant select
 const startSpinSequence = () => {
   if (isSpinning.value) return
+
+  if (instantSelectAll.value) {
+    instantSelectAllWinners()
+    return
+  }
 
   playClick() // Sound effect
 
@@ -379,7 +525,8 @@ const onInnerComplete = (segment) => {
   // Wait 0.8 seconds then spin outer ring
   setTimeout(() => {
     currentStep.value = 2
-    wheelRef.value.spinOuter()
+    wheelRef.value.spinOuter(forcedOuterIndex.value)
+    forcedOuterIndex.value = null // Reset for next time
   }, 800)
 }
 
@@ -396,6 +543,7 @@ const saveToLocalStorage = () => {
       wheel2Size: outerRingSize.value,
       arrowMultiplier: arrowMultiplier.value,
       removeWinner: autoRemoveWinner.value,
+      instantSelectAll: instantSelectAll.value,
       spinDuration: spinDuration.value
     }
     localStorage.setItem('wheelSettings', JSON.stringify(settings))
@@ -442,7 +590,7 @@ const removeWinnerFrom = (target) => {
 
   if (removed) {
     saveToLocalStorage()
-    showFinalResult.value = false
+    showFinalResult.value = false // Close the modal after removal
   }
 }
 
@@ -450,22 +598,50 @@ const removeWinnerFrom = (target) => {
 const onOuterComplete = (segment) => {
   finalResults.outer = segment.label
 
-  // Show final results
+  // Show results
   setTimeout(() => {
     currentStep.value = 0
-    showFinalResult.value = true
     playWin() // Win sound
 
-    // Add to winner log
-    winnerLogs.value.push({
-      id: ++logIdCounter,
-      inner: finalResults.inner,
-      outer: finalResults.outer,
-      timestamp: Date.now()
-    })
-    saveLogsToLocalStorage()
+    if (instantSelectAll.value) {
+      // Logic for Bulk Results
+      const logsToSave = bulkWinnersList.value.map(win => ({
+        id: ++logIdCounter,
+        inner: win.inner,
+        outer: win.outer,
+        timestamp: Date.now()
+      }))
+      
+      winnerLogs.value.push(...logsToSave)
+      saveLogsToLocalStorage()
+      
+      // Auto remove bulk
+      if (autoRemoveWinner.value) {
+        const inToRemove = new Set(bulkWinnersList.value.map(w => w.inner))
+        const outToRemove = new Set(bulkWinnersList.value.map(w => w.outer))
+        innerRingSegments.value = innerRingSegments.value.filter(s => !inToRemove.has(s.label))
+        outerRingSegments.value = outerRingSegments.value.filter(s => !outToRemove.has(s.label))
+        saveToLocalStorage()
+      }
+      // Delay bulk results modal for a moment so they see the wheel winner
+      setTimeout(() => {
+        showBulkResults.value = true
+      }, 1500)
+    } else {
+      // Normal single result paths
+      showFinalResult.value = true
 
-    handleAutoRemove() // Remove winners if setting enabled
+      // Add to winner log
+      winnerLogs.value.push({
+        id: ++logIdCounter,
+        inner: finalResults.inner,
+        outer: finalResults.outer,
+        timestamp: Date.now()
+      })
+      saveLogsToLocalStorage()
+      // Note: handleAutoRemove() is NOT called here anymore 
+      // as requested: "auto remove winners will just on Instant Select all"
+    }
   }, 500)
 }
 
@@ -486,6 +662,7 @@ const handleSettingsSave = (settings) => {
   outerRingSize.value = settings.wheel2Size
   arrowMultiplier.value = settings.arrowMultiplier || 100
   autoRemoveWinner.value = settings.removeWinner
+  instantSelectAll.value = settings.instantSelectAll || false
   spinDuration.value = settings.spinDuration
 
   saveToLocalStorage()
@@ -506,6 +683,7 @@ onMounted(() => {
       if (parsed.wheel2Size) outerRingSize.value = parsed.wheel2Size
       if (parsed.arrowMultiplier) arrowMultiplier.value = parsed.arrowMultiplier
       if (parsed.removeWinner) autoRemoveWinner.value = parsed.removeWinner
+      if (parsed.hasOwnProperty('instantSelectAll')) instantSelectAll.value = parsed.instantSelectAll
       if (parsed.spinDuration) spinDuration.value = parsed.spinDuration
     } catch (e) {
       console.error('Failed to load settings:', e)
@@ -528,4 +706,16 @@ onMounted(() => {
 
 <style>
 /* Global style adjustments that are specific to this component but not scoped */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--accent);
+  border-radius: 10px;
+  opacity: 0.5;
+}
 </style>

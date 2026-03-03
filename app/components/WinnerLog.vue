@@ -2,9 +2,17 @@
   <div class="flex flex-col h-[300px] shrink-0 rounded-xl overflow-hidden" :style="{ backgroundColor: 'var(--panel-bg)', border: '1px solid var(--border-color)' }">
     <div class="px-5 py-3 border-b flex justify-between items-center" :style="{ borderColor: 'var(--border-color)', backgroundColor: 'var(--panel-header-bg)' }">
       <h3 class="text-lg font-bold m-0" :style="{ color: 'var(--text-primary)' }">📋 Recent Winners</h3>
-      <button v-if="logs.length > 0" class="px-2 py-1 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 hover:border-red-500/40 text-red-400 rounded-md text-xs font-bold cursor-pointer" @click="$emit('clear')">
-        🗑️ Clear
-      </button>
+      <div class="flex gap-2" v-if="logs.length > 0">
+        <button 
+          class="px-2 py-1 bg-green-500/10 hover:bg-green-500/20 border border-green-500/20 hover:border-green-500/40 text-green-400 rounded-md text-xs font-bold cursor-pointer flex items-center gap-1 transition-all" 
+          @click="copyLogs"
+        >
+          {{ copySuccess ? '✅ Copied!' : '📋 Copy' }}
+        </button>
+        <button class="px-1.5 py-1 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 hover:border-red-500/40 text-red-400 rounded-md text-xs font-bold cursor-pointer" @click="$emit('clear')">
+          🗑️ Clear
+        </button>
+      </div>
     </div>
 
     <div class="flex-1 overflow-y-auto p-2 min-h-0" ref="logListRef">
@@ -67,6 +75,26 @@ const reversedLogs = computed(() => [...props.logs].reverse())
 const formatTime = (timestamp) => {
   const date = new Date(timestamp)
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+}
+
+const copySuccess = ref(false)
+
+const copyLogs = async () => {
+  if (props.logs.length === 0) return
+
+  const text = props.logs.map((log, index) => {
+    return `${index + 1}. ${log.inner} → ${log.outer}`
+  }).join('\n')
+
+  try {
+    await navigator.clipboard.writeText(text)
+    copySuccess.value = true
+    setTimeout(() => {
+      copySuccess.value = false
+    }, 2000)
+  } catch (err) {
+    console.error('Failed to copy:', err)
+  }
 }
 
 // Auto-scroll to top when new log added

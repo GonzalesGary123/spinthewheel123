@@ -27,8 +27,6 @@
               stroke-width="3"
             />
             <text
-              :x="getOuterTextX(index)"
-              :y="getOuterTextY(index)"
               :transform="getOuterTextTransform(index)"
               class="segment-text"
               :style="{ 
@@ -36,7 +34,8 @@
                 fontWeight: index === winningOuterIndex ? '900' : '600'
               }"
               text-anchor="middle"
-              dominant-baseline="middle"
+              dominant-baseline="central"
+              alignment-baseline="middle"
             >
               {{ formatLabel(segment.label, outerSegments.length, 'outer') }}
             </text>
@@ -65,8 +64,6 @@
               stroke-width="3"
             />
             <text
-              :x="getInnerTextX(index)"
-              :y="getInnerTextY(index)"
               :transform="getInnerTextTransform(index)"
               class="segment-text"
               :style="{ 
@@ -74,7 +71,8 @@
                 fontWeight: index === winningInnerIndex ? '900' : '600'
               }"
               text-anchor="middle"
-              dominant-baseline="middle"
+              dominant-baseline="central"
+              alignment-baseline="middle"
             >
               {{ formatLabel(segment.label, innerSegments.length, 'inner') }}
             </text>
@@ -211,17 +209,14 @@ const getTextTransform = (index, totalSegments, innerR, outerR) => {
   const angle = index * anglePerSegment + anglePerSegment / 2
   const radius = (innerR + outerR) / 2
   const pos = polarToCartesian(CENTER_X, CENTER_Y, radius, angle)
-  // Add 90 degrees to make text vertical (pointing to center)
-  return `rotate(${angle + 90}, ${pos.x}, ${pos.y})`
+  // Use translate then rotate for better precision
+  return `translate(${pos.x}, ${pos.y}) rotate(${angle + 90})`
 }
 
 const getInnerTextTransform = (index) => getTextTransform(index, props.innerSegments.length, INNER_RADIUS_INNER, INNER_RADIUS_OUTER.value)
 const getOuterTextTransform = (index) => getTextTransform(index, props.outerSegments.length, OUTER_RADIUS_INNER.value, OUTER_RADIUS_OUTER.value)
 
-const getInnerTextX = (index) => polarToCartesian(CENTER_X, CENTER_Y, (INNER_RADIUS_INNER + INNER_RADIUS_OUTER.value) / 2, index * (360/props.innerSegments.length) + (360/props.innerSegments.length)/2).x
-const getInnerTextY = (index) => polarToCartesian(CENTER_X, CENTER_Y, (INNER_RADIUS_INNER + INNER_RADIUS_OUTER.value) / 2, index * (360/props.innerSegments.length) + (360/props.innerSegments.length)/2).y
-const getOuterTextX = (index) => polarToCartesian(CENTER_X, CENTER_Y, (OUTER_RADIUS_INNER.value + OUTER_RADIUS_OUTER.value) / 2, index * (360/props.outerSegments.length) + (360/props.outerSegments.length)/2).x
-const getOuterTextY = (index) => polarToCartesian(CENTER_X, CENTER_Y, (OUTER_RADIUS_INNER.value + OUTER_RADIUS_OUTER.value) / 2, index * (360/props.outerSegments.length) + (360/props.outerSegments.length)/2).y
+// X/Y helpers are now integrated into the single transform for better alignment
 
 // Selected/Winner "Rise Above" effect logic
 const getSegmentStyle = (index, type) => {
@@ -352,7 +347,7 @@ const animateRotation = (duration, startRot, totalRot, isInner, onComplete) => {
 }
 
 // Spin the inner ring
-const spinInner = () => {
+const spinInner = (forcedIndex = null) => {
   if (isInnerSpinning.value || isOuterSpinning.value) return
   
   initAudio()
@@ -372,8 +367,8 @@ const spinInner = () => {
   // Physics Calculation: 5-8 whole rotations
 
   
-  // Choose a random winning index first to ensure we can center it
-  const segmentIndex = Math.floor(Math.random() * props.innerSegments.length)
+  // Choose a winning index (random if not forced)
+  const segmentIndex = forcedIndex !== null ? forcedIndex : Math.floor(Math.random() * props.innerSegments.length)
   
   // Land anywhere inside the segment (not just the middle!)
   // Avoid the exact edges (leave 1 degree buffer)
@@ -408,7 +403,7 @@ const spinInner = () => {
 }
 
 // Spin the outer ring
-const spinOuter = () => {
+const spinOuter = (forcedIndex = null) => {
   if (isOuterSpinning.value) return
   
   if (props.outerSegments.length === 0) {
@@ -421,9 +416,8 @@ const spinOuter = () => {
   
   // Physics Calculation: 5-8 whole rotations
 
-  
-  // Choose a random winning index first
-  const segmentIndex = Math.floor(Math.random() * props.outerSegments.length)
+  // Choose a winning index (random if not forced)
+  const segmentIndex = forcedIndex !== null ? forcedIndex : Math.floor(Math.random() * props.outerSegments.length)
   
   // Land anywhere inside the segment (not just the middle!)
   const angleBuffer = Math.min(2, outerSegmentAngle.value / 4)
@@ -455,8 +449,8 @@ const spinOuter = () => {
 }
 
 // Start sequential spin
-const startSpin = () => {
-  spinInner()
+const startSpin = (innerForced = null) => {
+  spinInner(innerForced)
 }
 
 // Expose methods
@@ -517,12 +511,8 @@ defineExpose({
   font-weight: 700;
   fill: #ffffff;
   pointer-events: none;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-}
-
-.segment-text.selected {
-  font-size: 140%; /* Increase font size by 40% */
-  font-weight: 900; /* Increase font weight to 900 */
+  user-select: none;
+  text-shadow: 0 0 3px rgba(0, 0, 0, 0.6);
 }
 
 
