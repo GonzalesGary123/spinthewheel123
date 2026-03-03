@@ -58,7 +58,7 @@
 
         <div class="mt-6 text-center">
           <p class="text-sm" :style="{ color: 'var(--text-muted)' }">
-            {"Don't have an account? "}
+            Don't have an account?
             <NuxtLink to="/signup" class="font-bold hover:underline" :style="{ color: 'var(--text-accent)' }">Sign up</NuxtLink>
           </p>
         </div>
